@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/static/css/github.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+    <div id="site">
+        <div id="header">
+            <div id="header-content">
+                <div id="branding">
+                    <a href="/">
+                        <h1>Gobusta</h1>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div id="content-wrapper">
+            <div id="content">
+                <main id="main">
+                    <article class="post-detail">
+                        <header>
+                            <h3 class="post-title">{{ .Title }}</h3>
+                            <div class="post-metadata">
+                                <div class="post-publishedat">
+                                    <span>{{ .Date }}</span>
+                                </div>
+				{{ if not .Tags }}
+                                <div class="post-tag">
+                                    <span>Tags:</span>
+                                    <div class="tag-container">
+                                        {{ range .Tags }}
+                                        <span class="tag">#{{ . }}</span>
+					{{ end }}
+                                    </div>
+                                </div>
+				{{ end }}
+                            </div>
+                        </header>
+                        <div id="post-content">
+                            {{ .Content }}
+                        </div>
+                    </article>
+                </main>
+            </div>
+        </div>
+        <div id="footer">
+            <div id="footer-content">
+                <div id="copyright">
+                    ©2020
+                </div>
+                <div id="contact">
+                    <ul>
+                        <li><a href="mailto:sample_email@gmail.com" target="_blank" rel="noopener noreferrer">Email</a></li>
+                        <li><a href="https://github.com/sample" target="_blank" rel="noopener noreferrer">Github</a></li>
+                        <li><a href="https://linkedin.com/in/sample" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</body>
+
+</html>
