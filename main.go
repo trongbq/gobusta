@@ -43,7 +43,6 @@ const (
 type Post struct {
 	Title        string
 	Date         string
-	Tags         []string
 	URL          string
 	Content      template.HTML
 	OriginalFile string
