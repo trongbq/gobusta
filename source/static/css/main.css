@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata&display=swap');
+
 * {
     box-sizing: border-box;
 }
@@ -13,7 +15,6 @@ html {
 /* Normalization START */
 
 body {
-    color: rgb(36, 41, 46);
     hyphens: none;
     -webkit-hyphens: none;
     -ms-hyphens: none;
@@ -87,13 +88,11 @@ kbd,
 samp {
     font-family: Inconsolata;
     font-weight: 400;
-    font-size: 85%;
 }
 
 pre {
     display: block;
     text-align: left;
-    font-size: 85%;
     line-height: 1.45;
     margin: 0;
     padding: 16px;
@@ -103,16 +102,18 @@ pre {
     -moz-tab-size: 4;
     tab-size: 4;
     overflow: auto;
+    font-family: Inconsolata;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
 }
 
 code,
 kbd,
 tt,
 samp {
-    color: #b00;
+    color: #f39c12;
     padding: .2em .4em;
     margin: 0;
-    font-size: 85%;
     background-color: #f9f6f6;
     border-radius: 3px;
 }
@@ -132,15 +133,18 @@ pre samp {
 table {
     border-spacing: 0;
     border-collapse: collapse;
+    width: 100%;
 }
 
 td,
 th {
-    padding: 0;
+    padding: 8px;
+    text-align: left;
 }
 
 table thead {
-    color: #1d2b4c;
+    color: #fff;
+    background-color: #f39c12;
 }
 
 table tr:nth-child(even) {
