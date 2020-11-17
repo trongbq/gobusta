@@ -12,6 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alecthomas/chroma"
+	"github.com/alecthomas/chroma/formatters/html"
+	"github.com/alecthomas/chroma/lexers"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/niklasfasching/go-org/org"
 )
 
@@ -199,6 +203,7 @@ func collectPosts() ([]Post, error) {
 
 func convertToHTML(c string) (string, error) {
 	writer := org.NewHTMLWriter()
+	writer.HighlightCodeBlock = highlightCodeBlock
 	orgConf := org.New()
 	return orgConf.Parse(bytes.NewReader([]byte(c)), "").Write(writer)
 }
@@ -305,4 +310,19 @@ func copyFile(src, dest string) error {
 
 func getFileName(path string) string {
 	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+}
+
+func highlightCodeBlock(source, lang string, inline bool) string {
+	var w strings.Builder
+	l := lexers.Get(lang)
+	if l == nil {
+		l = lexers.Fallback
+	}
+	l = chroma.Coalesce(l)
+	it, _ := l.Tokenise(nil, source)
+	_ = html.New(html.WithLineNumbers(true)).Format(&w, styles.Get("github"), it)
+	if inline {
+		return `<div class="highlight-inline">` + "\n" + w.String() + "\n" + `</div>`
+	}
+	return `<div class="highlight">` + "\n" + w.String() + "\n" + `</div>`
 }
