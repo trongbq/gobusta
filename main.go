@@ -40,8 +40,8 @@ const (
 	templateDirName = "templates"
 
 	orgFileExt     = ".org"
-	orgTitlePrefix = "#+TITLE:"
-	orgDatePrefix  = "#+DATE:"
+	orgTitlePrefix = "#+title:"
+	orgDatePrefix  = "#+date:"
 )
 
 type Post struct {
