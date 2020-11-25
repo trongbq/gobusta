@@ -1,51 +1,30 @@
+{{define "indexhtml"}}
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ .Title }}</title>
-    <link rel="stylesheet" href="/static/css/prism.css">
-    <link rel="stylesheet" href="/static/css/main.css">
-</head>
+{{template "headhtml"}}
 
 <body>
-    <div id="site" style="max-width: 800px">
-	<header>
-		<div class="main">
-			<a href="/">Gobusta</a>
-		</div>
-		<nav>
-			<!-- right nav here -->
-		</nav>
-	</header>
+    <div id="site" style="min-width: 800px">
+        {{template "headerhtml"}}
         <main>
-                    <article class="post-detail">
-			    <h3 class="post-title">{{ .Title }}</h3>
-			    <div class="post-metadata">
-				<div class="post-published_at">
-				    <span>{{ .Date }}</span>
-				</div>
-			    </div>
-                        <div id="post-content">
-                            {{ .Content }}
-                        </div>
-                    </article>
+            <article class="post-detail">
+                <h3 class="post-title">{{ .Title }}</h3>
+                <div class="post-metadata">
+                    <div class="post-published_at">
+                        <span>{{ .Date }}</span>
+                    </div>
+                </div>
+                <div id="post-content">
+                    {{ .Content }}
+                </div>
+            </article>
         </main>
-	<hr>
-	<footer>
-		<div>
-			<span style="vertical-align: middle; text-align: center; padding-top: 2px; display: inline-block;">©</span> 2020 Gobusta
-		</div>
-		<div>
-			<a href="mailto:sample_email@gmail.com" target="_blank" rel="noopener noreferrer">Email</a>
-			<a href="https://github.com/sample" target="_blank" rel="noopener noreferrer">Github</a>
-			<a href="https://linkedin.com/in/sample" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-		</div>
-	</footer>
+		<hr>
+		{{template "footerhtml"}}
     </div>
-
-    <script src="/static/js/prism.js"></script>
+    {{template "scripthtml"}}
 </body>
 
 </html>
+{{end}}
