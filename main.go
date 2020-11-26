@@ -33,11 +33,12 @@ const (
 	buildCmd = "build"
 	serveCmd = "serve"
 
-	sourceDirName   = "source"
-	outDirName      = "dist"
-	postDirName     = "posts"
-	staticDirName   = "static"
-	templateDirName = "templates"
+	sourceDirName          = "source"
+	outDirName             = "dist"
+	postDirName            = "posts"
+	staticDirName          = "static"
+	templateDirName        = "templates"
+	templatePartialDirName = "templates/partials"
 
 	orgFileExt     = ".org"
 	orgTitlePrefix = "#+title:"
@@ -61,6 +62,7 @@ var (
 	baseDir   string
 	sourceDir string
 	outDir    string
+	templates *template.Template
 )
 
 func init() {
@@ -72,6 +74,12 @@ func init() {
 
 	sourceDir = join(baseDir, sourceDirName)
 	outDir = join(baseDir, outDirName)
+
+	// Get all templates
+	templates, err = getTemplates(join(sourceDir, templateDirName), join(sourceDir, templatePartialDirName))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
@@ -122,25 +130,17 @@ func parseCommand() {
 }
 
 func generateIndexPage(ps []Post) error {
-	t, err := newTemplate(join(sourceDir, templateDirName, "index.html"))
-	if err != nil {
-		return err
-	}
 	f, err := os.Create(join(outDir, "index.html"))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return t.Execute(f, ps)
+	return templates.ExecuteTemplate(f, "indexhtml", ps)
 }
 
 func generatePosts(ps []Post) error {
-	t, err := newTemplate(join(sourceDir, templateDirName, "post.html"))
-	if err != nil {
-		return err
-	}
 	outPostDir := join(outDir, postDirName)
-	err = os.Mkdir(outPostDir, 0755)
+	err := os.Mkdir(outPostDir, 0755)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func generatePosts(ps []Post) error {
 		}
 		defer f.Close()
 
-		err = t.Execute(f, p)
+		err = templates.ExecuteTemplate(f, "posthtml", p)
 		if err != nil {
 			return err
 		}
@@ -210,15 +210,6 @@ func convertToHTML(c string) (string, error) {
 
 func join(paths ...string) string {
 	return strings.Join(paths, string(os.PathSeparator))
-}
-
-func newTemplate(file string) (*template.Template, error) {
-	c, err := ioutil.ReadFile(file)
-	if err != nil {
-		return &template.Template{}, err
-	}
-	cs := string(c)
-	return template.New(getFileName(file)).Parse(cs)
 }
 
 func cleanDir(dir string) error {
@@ -325,4 +316,20 @@ func highlightCodeBlock(source, lang string, inline bool) string {
 		return `<div class="highlight-inline">` + "\n" + w.String() + "\n" + `</div>`
 	}
 	return `<div class="highlight">` + "\n" + w.String() + "\n" + `</div>`
+}
+
+func getTemplates(dirs ...string) (*template.Template, error) {
+	var templateFiles []string
+	for _, dir := range dirs {
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, file := range files {
+			if strings.HasSuffix(file.Name(), ".html") {
+				templateFiles = append(templateFiles, join(dir, file.Name()))
+			}
+		}
+	}
+	return template.New("").ParseFiles(templateFiles...)
 }

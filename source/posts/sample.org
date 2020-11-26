@@ -1,5 +1,5 @@
-#+TITLE: Sample org post content
-#+DATE: <2020-10-14 Wed>
+#+title: Sample org post content
+#+date: <2020-10-14 Wed>
 
 This article offers a sample of basic orgmode syntax that can be used in this blog post files, also it shows whether basic HTML elements are decorated with CSS.
 
@@ -69,4 +69,3 @@ Don’t communicate by sharing memory, share memory by communicating. -- Rob Pik
   - Item 2.2
 
 And many more...
-

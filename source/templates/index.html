@@ -2,10 +2,11 @@
 <!DOCTYPE html>
 <html lang="en">
 
-{{template "headhtml"}}
+{{template "headhtml" .}}
+
 <body>
     <div id="site" style="min-width: 800px">
-		{{template "headerhtml"}}
+		{{template "headerhtml" .}}
         <main>
             <div id="post-list">
 		    {{ range . }}
@@ -22,9 +23,9 @@
 		    {{ end }}
             </div>
         </main>
-		{{template "footerhtml"}}
+		{{template "footerhtml" .}}
 	</div>
-	{{template "scripthtml"}}
+	{{template "scripthtml" .}}
 </body>
 
 </html>

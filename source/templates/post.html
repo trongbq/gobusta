@@ -1,12 +1,12 @@
-{{define "indexhtml"}}
+{{define "posthtml"}}
 <!DOCTYPE html>
 <html lang="en">
 
-{{template "headhtml"}}
+{{template "headhtml" .}}
 
 <body>
     <div id="site" style="min-width: 800px">
-        {{template "headerhtml"}}
+        {{template "headerhtml" .}}
         <main>
             <article class="post-detail">
                 <h3 class="post-title">{{ .Title }}</h3>
@@ -21,9 +21,9 @@
             </article>
         </main>
 		<hr>
-		{{template "footerhtml"}}
+		{{template "footerhtml" .}}
     </div>
-    {{template "scripthtml"}}
+    {{template "scripthtml" .}}
 </body>
 
 </html>
