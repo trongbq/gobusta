@@ -5,13 +5,13 @@
 {{template "headhtml" .}}
 
 <body>
-    <div id="site" style="max-width: 800px">
+    <div id="site">
         {{template "headerhtml" .}}
-        <main>
+        <main class="center-cont">
             <article class="post-detail">
                 <h3 class="post-title">{{ .Title }}</h3>
                 <div class="post-metadata">
-                    <div class="post-published_at">
+                    <div class="post-published-at">
                         <span>{{ .Date }}</span>
                     </div>
                 </div>
@@ -20,8 +20,7 @@
                 </div>
             </article>
         </main>
-		<hr>
-		{{template "footerhtml" .}}
+	{{template "footerhtml" .}}
     </div>
     {{template "scripthtml" .}}
 </body>

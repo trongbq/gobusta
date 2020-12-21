@@ -5,9 +5,9 @@
 {{template "headhtml" .}}
 
 <body>
-    <div id="site" style="min-width: 800px">
-		{{template "headerhtml" .}}
-        <main>
+    <div id="site">
+	{{template "headerhtml" .}}
+        <main class="center-cont">
             <div id="post-list">
 		    {{ range . }}
 		    <a href="{{ .URL }}" class="post-link">
@@ -23,9 +23,9 @@
 		    {{ end }}
             </div>
         </main>
-		{{template "footerhtml" .}}
-	</div>
-	{{template "scripthtml" .}}
+	{{template "footerhtml" .}}
+    </div>
+    {{template "scripthtml" .}}
 </body>
 
 </html>
