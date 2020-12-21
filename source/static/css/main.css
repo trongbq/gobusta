@@ -5,6 +5,11 @@
     box-sizing: border-box;
 }
 
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
 html {
     font-family: Arial;
     height: 100%;
@@ -85,6 +90,17 @@ mark {
     border-radius: 3px;
 }
 
+figure {
+	margin: 0;
+	padding: 0;
+}
+
+figcaption {
+	font-weight: 300;
+	font-size: .9rem;
+	color: #9a9a9a;
+}
+
 code,
 tt,
 kbd,
@@ -115,12 +131,12 @@ code,
 kbd,
 tt,
 samp {
-    padding: .2em .4em;
-    margin: 0;
+    padding: .05em .4em;
+    margin: 0 .1em;
     background-color: rgba(27,31,35,.05);
     font-family: 'SF Mono', Inconsolata;
     font-size: 85%;
-    border-radius: 3px;
+    border-radius: 6px;
 }
 
 pre code,
@@ -149,7 +165,7 @@ th {
 
 table thead {
     color: #fff;
-    background-color: #aaa;
+    background-color: rgb(60, 64, 67);
 }
 
 table tr:nth-child(even) {
@@ -192,8 +208,10 @@ b {
 }
 
 #site {
-	min-height: 100vh;
-	margin-bottom: 40px;
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
 }
 
 #site header {
@@ -277,4 +295,8 @@ b {
 
 .post-content {
 	margin-top: 20px;
+}
+
+.post-content img {
+	width: 800px;
 }
