@@ -30,6 +30,10 @@ The blockquote element represents content that is quoted from another source, op
 Don’t communicate by sharing memory, share memory by communicating. -- Rob Pike
 #+END_QUOTE
 
+#+CAPTION: If you feel the desire to write a book, what would it be about? - Photo by Glenn Carstens-Peters on Unsplash
+[[/static/img/glenn-carstens-peters-npxXWgQ33ZQ-unsplash.jpg]]
+
+
 * Tables
 | Name  | Phone | Age |
 |-------+-------+-----|
@@ -37,17 +41,24 @@ Don’t communicate by sharing memory, share memory by communicating. -- Rob Pik
 | Anna  |  4321 |  25 |
 
 * Code blocks
-#+BEGIN_SRC html
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Example</title>
-</head>
-<body>
-  <p>Test</p>
-</body>
-</html>
+#+BEGIN_SRC go
+func parse(name string, src []byte, flags parser.Mode) *ast.File {
+	ast1, err := parser.ParseFile(fset, name, src, flags)
+	if err != nil {
+		if list, ok := err.(scanner.ErrorList); ok {
+			// If err is a scanner.ErrorList, its String will print just
+			// the first error and then (+n more errors).
+			// Instead, turn it into a new Error that will return
+			// details for all the errors.
+			for _, e := range list {
+				fmt.Fprintln(os.Stderr, e)
+			}
+			os.Exit(2)
+		}
+		fatalf("parsing %s: %s", name, err)
+	}
+	return ast1
+}
 #+END_SRC
 
 * List types

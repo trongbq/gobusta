@@ -7,12 +7,12 @@
 <body>
     <div id="site">
 	{{template "headerhtml" .}}
-        <main class="center-cont">
+        <main class="center-cont" id="main-content">
             <div id="post-list">
 		    {{ range . }}
 		    <a href="{{ .URL }}" class="post-link">
 			<div class="post-list-item">
-				<h3>#{{ .Title }}</h3>
+				<h3>{{ .Title }}</h3>
 			    <div class="post-metadata">
 				<div class="post-published-at">
 				    <span>{{ .Date }}</span>
