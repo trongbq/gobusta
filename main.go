@@ -69,6 +69,7 @@ func (p Post) RenderContent() template.HTML {
 var (
 	buildFlag = flag.NewFlagSet(buildCmd, flag.ExitOnError)
 	serveFlag = flag.NewFlagSet(serveCmd, flag.ExitOnError)
+	servePort = serveFlag.Int("port", 8080, "Port number for serving server")
 )
 
 func init() {
@@ -107,11 +108,11 @@ func main() {
 	} else if serveFlag.Parsed() {
 		// TODO: Add reload
 		http.Handle("/", http.FileServer(http.Dir(outDir)))
-		err := http.ListenAndServe(":8081", nil)
+		log.Printf("Server will be running on port %v", *servePort)
+		err := http.ListenAndServe(fmt.Sprintf(":%v", *servePort), nil)
 		if err != nil {
 			log.Fatalf("Can not start server: %v", err)
 		}
-		log.Println("Server is running on port 8080")
 	}
 }
 
