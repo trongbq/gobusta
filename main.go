@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Depado/bfchroma"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/russross/blackfriday/v2"
 	"gopkg.in/yaml.v2"
 )
@@ -42,6 +44,17 @@ const (
 	frontMatterDelimiter = "+++\n"
 )
 
+var (
+	baseDir    string
+	contentDir string
+	outDir     string
+	templates  *template.Template
+
+	ErrInvalidPostFormat = errors.New("Invalid post format")
+
+	chromaRenderer = bfchroma.NewRenderer(bfchroma.ChromaStyle(styles.GitHub))
+)
+
 type Post struct {
 	Title   string
 	Date    string
@@ -50,21 +63,12 @@ type Post struct {
 }
 
 func (p Post) RenderContent() template.HTML {
-	return template.HTML(blackfriday.Run([]byte(p.Content)))
+	return template.HTML(blackfriday.Run([]byte(p.Content), blackfriday.WithRenderer(chromaRenderer)))
 }
 
 var (
 	buildFlag = flag.NewFlagSet(buildCmd, flag.ExitOnError)
 	serveFlag = flag.NewFlagSet(serveCmd, flag.ExitOnError)
-)
-
-var (
-	baseDir    string
-	contentDir string
-	outDir     string
-	templates  *template.Template
-
-	ErrInvalidPostFormat = errors.New("Invalid post format")
 )
 
 func init() {
