@@ -1,2 +1,0 @@
-* Gobusta
-A static blog engine.
