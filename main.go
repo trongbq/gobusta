@@ -28,7 +28,11 @@ Usage:
 The commands are:
 
 	build 	build and render entire source
-	server	start a local server which serve generated files
+	serve	start a local server which serve generated files
+
+And few options
+	build --clean to clean the build directory before build content
+	serve --port [int] to specify the running port number
 	`
 
 const (
@@ -148,6 +152,7 @@ func renderContentToHTML(dir string) ([]Post, error) {
 	log.Println("Render the content to HTML")
 	exist, err := exists(dir)
 	if err != nil {
+		log.Printf("Something wrong with the content directory %v", err)
 		return nil, err
 	}
 	if !exist {
@@ -171,6 +176,7 @@ func renderContentToHTML(dir string) ([]Post, error) {
 		if err != nil {
 			return err
 		}
+
 		// Read the content file
 		fmData, content, err := splitPostContent(file)
 		if err != nil {
@@ -188,6 +194,7 @@ func renderContentToHTML(dir string) ([]Post, error) {
 			URL:     path[len(dir):len(path)-len(".md")] + ".html",
 		}
 		posts = append(posts, p)
+
 		// Render the content to HTML file
 		outPath := filepath.Join(outDir, p.URL)
 		os.MkdirAll(filepath.Dir(outPath), os.ModePerm)
