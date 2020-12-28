@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -45,12 +46,13 @@ const (
 )
 
 var (
-	baseDir    string
-	contentDir string
-	outDir     string
-	templates  *template.Template
+	baseDir   string
+	outDir    string
+	templates *template.Template
 
-	ErrInvalidPostFormat = errors.New("Invalid post format")
+	ErrInvalidPostFormat   = errors.New("Invalid post format")
+	ErrContentDirNotExist  = errors.New("Content directory does not exist")
+	ErrTemplateDirNotExist = errors.New("Template directory does not exist")
 
 	chromaRenderer = bfchroma.NewRenderer(bfchroma.ChromaStyle(styles.GitHub))
 )
@@ -67,9 +69,10 @@ func (p Post) RenderContent() template.HTML {
 }
 
 var (
-	buildFlag = flag.NewFlagSet(buildCmd, flag.ExitOnError)
-	serveFlag = flag.NewFlagSet(serveCmd, flag.ExitOnError)
-	servePort = serveFlag.Int("port", 8080, "Port number for serving server")
+	buildFlag  = flag.NewFlagSet(buildCmd, flag.ExitOnError)
+	buildClean = buildFlag.Bool("clean", false, "Clean the dist folder before the build")
+	serveFlag  = flag.NewFlagSet(serveCmd, flag.ExitOnError)
+	servePort  = serveFlag.Int("port", 8080, "Port number for serving server")
 )
 
 func init() {
@@ -79,7 +82,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	contentDir = filepath.Join(baseDir, contentDirName)
+
 	outDir = filepath.Join(baseDir, outDirName)
 }
 
@@ -87,13 +90,19 @@ func main() {
 	parseCommand()
 
 	if buildFlag.Parsed() {
-		// Get all templates in template directory
 		var err error
+		if *buildClean {
+			log.Println("Clean the dist before the build")
+			err = cleanDir(outDir)
+			if err != nil {
+				panic(err)
+			}
+		}
 		templates, err = prepareTemplates(filepath.Join(baseDir, templateDirName))
 		if err != nil {
 			panic(err)
 		}
-		posts, err := renderContentToHTML()
+		posts, err := renderContentToHTML(filepath.Join(baseDir, contentDirName))
 		if err != nil {
 			panic(err)
 		}
@@ -135,14 +144,22 @@ func parseCommand() {
 	}
 }
 
-func renderContentToHTML() ([]Post, error) {
+func renderContentToHTML(dir string) ([]Post, error) {
 	log.Println("Render the content to HTML")
+	exist, err := exists(dir)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, ErrTemplateDirNotExist
+	}
+
 	var posts []Post
 	type FrontMatter struct {
 		Title string
 		Date  string
 	}
-	err := filepath.Walk(contentDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -168,7 +185,7 @@ func renderContentToHTML() ([]Post, error) {
 			Title:   fm.Title,
 			Date:    fm.Date,
 			Content: content,
-			URL:     path[len(contentDir):len(path)-len(".md")] + ".html",
+			URL:     path[len(dir):len(path)-len(".md")] + ".html",
 		}
 		posts = append(posts, p)
 		// Render the content to HTML file
@@ -231,83 +248,84 @@ func renderIndexPage(ps []Post) error {
 	return templates.ExecuteTemplate(f, "indexhtml", ps)
 }
 
-// func cleanDir(dir string) error {
-//     d, err := os.Stat(dir)
-//     // Check if dir exists, then clean it
-//     if err == nil {
-//         if d.IsDir() {
-//             // Clean output content
-//             infos, err := ioutil.ReadDir(dir)
-//             if err != nil {
-//                 return err
-//             }
-//             for _, info := range infos {
-//                 os.RemoveAll(filepath.Join(dir, info.Name()))
-//             }
-//             return nil
-//         } else {
-//             // If `out` is not a dir, then simply delete it
-//             err := os.Remove(dir)
-//             if err != nil {
-//                 return err
-//             }
-//         }
-//     }
-//     return os.Mkdir(dir, 0755)
-// }
+func cleanDir(dir string) error {
+	d, err := os.Stat(dir)
+	// Check if dir exists, then clean it
+	if err == nil {
+		if d.IsDir() {
+			// Clean output content
+			infos, err := ioutil.ReadDir(dir)
+			if err != nil {
+				return err
+			}
+			for _, info := range infos {
+				os.RemoveAll(filepath.Join(dir, info.Name()))
+			}
+			return nil
+		} else {
+			// If `out` is not a dir, then simply delete it
+			err := os.Remove(dir)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return os.Mkdir(dir, 0755)
+}
 
 func copyDir(src, dest string) error {
+	// Make sure source directory exists
 	srcStat, err := os.Stat(src)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
+	if err != nil {
+		return errors.New(fmt.Sprintf("Can not copy from %v to %v, source does not exist", src, dest, src))
+	}
 
+	// Check destination is valid, create new if it does not exist
 	_, err = os.Stat(dest)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err == nil {
-		return fmt.Errorf("destination dir already exists: %v", dest)
-	}
-
-	err = os.Mkdir(dest, srcStat.Mode())
 	if err != nil {
-		return err
+		// Destination does not exists, create it
+		err = os.Mkdir(dest, srcStat.Mode())
+		if err != nil {
+			return err
+		}
 	}
-
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if path == src {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
 			return nil
 		}
-
-		if info.IsDir() {
-			err := copyDir(path, filepath.Join(dest, info.Name()))
-			if err != nil {
-				return err
-			}
-		} else {
-			err := copyFile(path, filepath.Join(dest, info.Name()))
-			if err != nil {
-				return err
-			}
-		}
-		return nil
+		log.Printf("Copy file %v", path[len(src):])
+		return copyFile(path, filepath.Join(dest, path[len(src):]))
 	})
 }
 
 func copyFile(src, dest string) error {
 	in, err := os.Open(src)
 	if err != nil {
+		log.Printf("Can not open source file %v", src)
 		return err
 	}
 
+	// Make sure to create parent directory first before creating the file
+	os.MkdirAll(filepath.Dir(dest), os.ModePerm)
+
 	out, err := os.Create(dest)
 	if err != nil {
+		log.Printf("Can not create destination file %v", dest)
 		return err
 	}
 
 	_, err = io.Copy(out, in)
 	if err != nil {
+		log.Printf("Can not copy file from %v to %v", src, dest)
 		return err
 	}
 
@@ -318,25 +336,18 @@ func copyFile(src, dest string) error {
 	return out.Close()
 }
 
-// func highlightCodeBlock(source, lang string, inline bool) string {
-//     var w strings.Builder
-//     l := lexers.Get(lang)
-//     if l == nil {
-//         l = lexers.Fallback
-//     }
-//     l = chroma.Coalesce(l)
-//     it, _ := l.Tokenise(nil, source)
-//     _ = html.New(html.WithLineNumbers(true)).Format(&w, styles.Get("github"), it)
-//     if inline {
-//         return `<div class="highlight-inline">` + "\n" + w.String() + "\n" + `</div>`
-//     }
-//     return `<div class="highlight">` + "\n" + w.String() + "\n" + `</div>`
-// }
-
 func prepareTemplates(dir string) (*template.Template, error) {
 	log.Printf("Preparing templates in directory %v\n", dir)
+	exist, err := exists(dir)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, ErrTemplateDirNotExist
+	}
+
 	var templates []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -351,4 +362,15 @@ func prepareTemplates(dir string) (*template.Template, error) {
 		return nil, err
 	}
 	return template.New("").ParseFiles(templates...)
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+	if err == nil {
+		return true, nil
+	}
+	return false, nil
 }
