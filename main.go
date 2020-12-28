@@ -1,112 +1,131 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/alecthomas/chroma"
-	"github.com/alecthomas/chroma/formatters/html"
-	"github.com/alecthomas/chroma/lexers"
+	"github.com/Depado/bfchroma"
 	"github.com/alecthomas/chroma/styles"
-	"github.com/niklasfasching/go-org/org"
+	"github.com/russross/blackfriday/v2"
+	"gopkg.in/yaml.v2"
 )
 
-const usage = `Gobusta is a tool for building blog
+const usage = `Gobusta is a handy tool for building minimal blog
 Usage:
 	gobusta <command> [arguments]
 
 The commands are:
 
 	build 	build and render entire source
-	server	start a local server which serve generated files
+	serve	start a local server which serve generated files
+
+And few options
+	build --clean to clean the build directory before build content
+	serve --port [int] to specify the running port number
 	`
 
 const (
 	buildCmd = "build"
 	serveCmd = "serve"
 
-	sourceDirName          = "source"
-	outDirName             = "dist"
-	postDirName            = "posts"
+	contentDirName         = "content"
 	staticDirName          = "static"
 	templateDirName        = "templates"
 	templatePartialDirName = "templates/partials"
 
-	orgFileExt     = ".org"
-	orgTitlePrefix = "#+title:"
-	orgDatePrefix  = "#+date:"
-)
+	outDirName = "dist"
 
-type Post struct {
-	Title        string
-	Date         string
-	URL          string
-	Content      template.HTML
-	OriginalFile string
-}
-
-var (
-	buildFlag = flag.NewFlagSet(buildCmd, flag.ExitOnError)
-	serveFlag = flag.NewFlagSet(serveCmd, flag.ExitOnError)
+	frontMatterDelimiter = "+++\n"
 )
 
 var (
 	baseDir   string
-	sourceDir string
 	outDir    string
 	templates *template.Template
+
+	ErrInvalidPostFormat   = errors.New("Invalid post format")
+	ErrContentDirNotExist  = errors.New("Content directory does not exist")
+	ErrTemplateDirNotExist = errors.New("Template directory does not exist")
+
+	chromaRenderer = bfchroma.NewRenderer(bfchroma.ChromaStyle(styles.GitHub))
+)
+
+type Post struct {
+	Title   string
+	Date    string
+	Content string
+	URL     string
+}
+
+func (p Post) RenderContent() template.HTML {
+	return template.HTML(blackfriday.Run([]byte(p.Content), blackfriday.WithRenderer(chromaRenderer)))
+}
+
+var (
+	buildFlag  = flag.NewFlagSet(buildCmd, flag.ExitOnError)
+	buildClean = buildFlag.Bool("clean", false, "Clean the dist folder before the build")
+	serveFlag  = flag.NewFlagSet(serveCmd, flag.ExitOnError)
+	servePort  = serveFlag.Int("port", 8080, "Port number for serving server")
 )
 
 func init() {
+	log.Println("Init the program: collect metadata information")
 	var err error
 	baseDir, err = os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 
-	sourceDir = join(baseDir, sourceDirName)
-	outDir = join(baseDir, outDirName)
-
-	// Get all templates
-	templates, err = getTemplates(join(sourceDir, templateDirName), join(sourceDir, templatePartialDirName))
-	if err != nil {
-		panic(err)
-	}
+	outDir = filepath.Join(baseDir, outDirName)
 }
 
 func main() {
 	parseCommand()
 
 	if buildFlag.Parsed() {
-		posts, err := collectPosts()
+		var err error
+		if *buildClean {
+			log.Println("Clean the dist before the build")
+			err = cleanDir(outDir)
+			if err != nil {
+				panic(err)
+			}
+		}
+		templates, err = prepareTemplates(filepath.Join(baseDir, templateDirName))
 		if err != nil {
 			panic(err)
 		}
-		cleanDir(outDir)
-		err = generateIndexPage(posts)
+		posts, err := renderContentToHTML(filepath.Join(baseDir, contentDirName))
 		if err != nil {
 			panic(err)
 		}
-		err = generatePosts(posts)
+		err = renderIndexPage(posts)
 		if err != nil {
 			panic(err)
 		}
-		err = copyDir(join(sourceDir, staticDirName), join(outDir, staticDirName))
+		err = copyDir(filepath.Join(baseDir, staticDirName), filepath.Join(outDir, staticDirName))
 		if err != nil {
 			panic(err)
 		}
 	} else if serveFlag.Parsed() {
 		// TODO: Add reload
 		http.Handle("/", http.FileServer(http.Dir(outDir)))
-		http.ListenAndServe(":8080", nil)
+		log.Printf("Server will be running on port %v", *servePort)
+		err := http.ListenAndServe(fmt.Sprintf(":%v", *servePort), nil)
+		if err != nil {
+			log.Fatalf("Can not start server: %v", err)
+		}
 	}
 }
 
@@ -129,87 +148,111 @@ func parseCommand() {
 	}
 }
 
-func generateIndexPage(ps []Post) error {
-	f, err := os.Create(join(outDir, "index.html"))
+func renderContentToHTML(dir string) ([]Post, error) {
+	log.Println("Render the content to HTML")
+	exist, err := exists(dir)
+	if err != nil {
+		log.Printf("Something wrong with the content directory %v", err)
+		return nil, err
+	}
+	if !exist {
+		return nil, ErrTemplateDirNotExist
+	}
+
+	var posts []Post
+	type FrontMatter struct {
+		Title string
+		Date  string
+	}
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+		log.Printf("Processing content file %v", path)
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+
+		// Read the content file
+		fmData, content, err := splitPostContent(file)
+		if err != nil {
+			return err
+		}
+		var fm FrontMatter
+		err = yaml.Unmarshal([]byte(fmData), &fm)
+		if err != nil {
+			return err
+		}
+		p := Post{
+			Title:   fm.Title,
+			Date:    fm.Date,
+			Content: content,
+			URL:     path[len(dir):len(path)-len(".md")] + ".html",
+		}
+		posts = append(posts, p)
+
+		// Render the content to HTML file
+		outPath := filepath.Join(outDir, p.URL)
+		os.MkdirAll(filepath.Dir(outPath), os.ModePerm)
+		f, err := os.Create(outPath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		err = templates.ExecuteTemplate(f, "posthtml", p)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return posts, err
+}
+
+func splitPostContent(input io.Reader) (string, string, error) {
+	splitFunc := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		fmd := []byte(frontMatterDelimiter)
+		dl := len(frontMatterDelimiter)
+		if i := bytes.Index(data, fmd); i >= 0 {
+			// Found the first delimiter, find second one
+			if j := bytes.Index(data[i+dl:], fmd); j >= 0 {
+				return i + dl + j + dl, bytes.TrimSpace(data[i+dl : j+dl]), nil
+			}
+			// Can not find second delimiter, return error
+			return 0, nil, ErrInvalidPostFormat
+		}
+		if atEOF {
+			return len(data), bytes.TrimSpace(data), nil
+		}
+		return 0, nil, nil
+	}
+	s := bufio.NewScanner(input)
+	s.Split(splitFunc)
+
+	s.Scan()
+	front := s.Text()
+	s.Scan()
+	content := s.Text()
+
+	if err := s.Err(); err != nil {
+		return "", "", err
+	}
+	return front, content, nil
+}
+
+func renderIndexPage(ps []Post) error {
+	f, err := os.Create(filepath.Join(outDir, "index.html"))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	return templates.ExecuteTemplate(f, "indexhtml", ps)
-}
-
-func generatePosts(ps []Post) error {
-	outPostDir := join(outDir, postDirName)
-	err := os.Mkdir(outPostDir, 0755)
-	if err != nil {
-		return err
-	}
-	for _, p := range ps {
-		f, err := os.Create(join(outPostDir, getFileName(p.OriginalFile)+".html"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		err = templates.ExecuteTemplate(f, "posthtml", p)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func collectPosts() ([]Post, error) {
-	var posts []Post
-	err := filepath.Walk(join(sourceDir, postDirName), func(path string, info os.FileInfo, err error) error {
-		if info != nil && !info.IsDir() && strings.HasSuffix(path, orgFileExt) {
-			c, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			post := Post{}
-			// Extract metadata
-			// FIXME: Improve with flexibility
-			cs := string(c)
-			lines := strings.Split(cs, "\n")
-			if len(lines) < 2 ||
-				!strings.HasPrefix(lines[0], orgTitlePrefix) ||
-				!strings.HasPrefix(lines[1], orgDatePrefix) {
-				return err
-			}
-			post.Title = strings.Trim(lines[0][len(orgTitlePrefix):], " ")
-			post.Date = strings.Trim(lines[1][len(orgDatePrefix):], " <>")
-
-			// Render to HTML
-			html, err := convertToHTML(strings.Join(lines[2:], "\n"))
-			if err != nil {
-				return err
-			}
-			post.Content = template.HTML(html)
-
-			// Set URL
-			post.URL = fmt.Sprintf("/%s/%s.html", postDirName, getFileName(path))
-
-			post.OriginalFile = path
-
-			posts = append(posts, post)
-
-		}
-		return nil
-	})
-
-	return posts, err
-}
-
-func convertToHTML(c string) (string, error) {
-	writer := org.NewHTMLWriter()
-	writer.HighlightCodeBlock = highlightCodeBlock
-	orgConf := org.New()
-	return orgConf.Parse(bytes.NewReader([]byte(c)), "").Write(writer)
-}
-
-func join(paths ...string) string {
-	return strings.Join(paths, string(os.PathSeparator))
 }
 
 func cleanDir(dir string) error {
@@ -223,7 +266,7 @@ func cleanDir(dir string) error {
 				return err
 			}
 			for _, info := range infos {
-				os.RemoveAll(join(dir, info.Name()))
+				os.RemoveAll(filepath.Join(dir, info.Name()))
 			}
 			return nil
 		} else {
@@ -238,57 +281,58 @@ func cleanDir(dir string) error {
 }
 
 func copyDir(src, dest string) error {
+	// Make sure source directory exists
 	srcStat, err := os.Stat(src)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
+	if err != nil {
+		return errors.New(fmt.Sprintf("Can not copy from %v to %v, source does not exist", src, dest, src))
+	}
 
+	// Check destination is valid, create new if it does not exist
 	_, err = os.Stat(dest)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err == nil {
-		return fmt.Errorf("destination dir already exists: %v", dest)
-	}
-
-	err = os.Mkdir(dest, srcStat.Mode())
 	if err != nil {
-		return err
+		// Destination does not exists, create it
+		err = os.Mkdir(dest, srcStat.Mode())
+		if err != nil {
+			return err
+		}
 	}
-
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if path == src {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
 			return nil
 		}
-
-		if info.IsDir() {
-			err := copyDir(path, join(dest, info.Name()))
-			if err != nil {
-				return err
-			}
-		} else {
-			err := copyFile(path, join(dest, info.Name()))
-			if err != nil {
-				return err
-			}
-		}
-		return nil
+		log.Printf("Copy file %v", path[len(src):])
+		return copyFile(path, filepath.Join(dest, path[len(src):]))
 	})
 }
 
 func copyFile(src, dest string) error {
 	in, err := os.Open(src)
 	if err != nil {
+		log.Printf("Can not open source file %v", src)
 		return err
 	}
 
+	// Make sure to create parent directory first before creating the file
+	os.MkdirAll(filepath.Dir(dest), os.ModePerm)
+
 	out, err := os.Create(dest)
 	if err != nil {
+		log.Printf("Can not create destination file %v", dest)
 		return err
 	}
 
 	_, err = io.Copy(out, in)
 	if err != nil {
+		log.Printf("Can not copy file from %v to %v", src, dest)
 		return err
 	}
 
@@ -299,37 +343,41 @@ func copyFile(src, dest string) error {
 	return out.Close()
 }
 
-func getFileName(path string) string {
-	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-}
-
-func highlightCodeBlock(source, lang string, inline bool) string {
-	var w strings.Builder
-	l := lexers.Get(lang)
-	if l == nil {
-		l = lexers.Fallback
+func prepareTemplates(dir string) (*template.Template, error) {
+	log.Printf("Preparing templates in directory %v\n", dir)
+	exist, err := exists(dir)
+	if err != nil {
+		return nil, err
 	}
-	l = chroma.Coalesce(l)
-	it, _ := l.Tokenise(nil, source)
-	_ = html.New(html.WithLineNumbers(true)).Format(&w, styles.Get("github"), it)
-	if inline {
-		return `<div class="highlight-inline">` + "\n" + w.String() + "\n" + `</div>`
+	if !exist {
+		return nil, ErrTemplateDirNotExist
 	}
-	return `<div class="highlight">` + "\n" + w.String() + "\n" + `</div>`
-}
 
-func getTemplates(dirs ...string) (*template.Template, error) {
-	var templateFiles []string
-	for _, dir := range dirs {
-		files, err := ioutil.ReadDir(dir)
+	var templates []string
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil, err
+			return err
 		}
-		for _, file := range files {
-			if strings.HasSuffix(file.Name(), ".html") {
-				templateFiles = append(templateFiles, join(dir, file.Name()))
-			}
+		if info.IsDir() || !strings.HasSuffix(path, ".html") {
+			return nil
 		}
+		log.Printf("Got template file: %v", path)
+		templates = append(templates, path)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return template.New("").ParseFiles(templateFiles...)
+	return template.New("").ParseFiles(templates...)
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+	if err == nil {
+		return true, nil
+	}
+	return false, nil
 }
