@@ -300,3 +300,8 @@ b {
 .post-content img {
 	width: 800px;
 }
+
+img + span {
+	font-size: .8rem;
+	opacity: .7;
+}
