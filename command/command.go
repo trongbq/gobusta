@@ -22,31 +22,47 @@ And few options
 const (
 	buildCmd = "build"
 	serveCmd = "serve"
+
+	content = "content"
+	static  = "static"
+	layouts = "layouts"
+	publish = "dist"
 )
 
-type Command struct {
-	Build      *flag.FlagSet
-	BuildClean *bool
-	Serve      *flag.FlagSet
-	ServePort  *int
+type flagCommand struct {
+	build            *flag.FlagSet
+	buildClean       *bool
+	buildFmDelimeter *string
+	serve            *flag.FlagSet
+	servePort        *int
 }
 
-func NewCommand() *Command {
+type command struct {
+	fc *flagCommand
+}
+
+func NewCommand() *command {
 	buildFlag := flag.NewFlagSet(buildCmd, flag.ExitOnError)
 	buildClean := buildFlag.Bool("clean", false, "Clean the dist folder before the build")
+	buildFmDelimeter := buildFlag.String("delimeter", "+++", "Delimeter for front matter")
+
 	serveFlag := flag.NewFlagSet(serveCmd, flag.ExitOnError)
 	servePort := serveFlag.Int("port", 8080, "Port number for serving server")
-	c := Command{
-		Build:      buildFlag,
-		BuildClean: buildClean,
-		Serve:      serveFlag,
-		ServePort:  servePort,
+
+	c := command{
+		fc: &flagCommand{
+			build:            buildFlag,
+			buildClean:       buildClean,
+			buildFmDelimeter: buildFmDelimeter,
+			serve:            serveFlag,
+			servePort:        servePort,
+		},
 	}
 	c.parse()
 	return &c
 }
 
-func (c Command) parse() {
+func (c command) parse() {
 	if len(os.Args) < 2 {
 		fmt.Println(usage)
 		os.Exit(1)
@@ -56,16 +72,11 @@ func (c Command) parse() {
 	args := os.Args[2:]
 	switch cmd {
 	case buildCmd:
-		c.Build.Parse(args)
+		c.fc.build.Parse(args)
 	case serveCmd:
-		c.Serve.Parse(args)
+		c.fc.serve.Parse(args)
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-}
-
-func (c *Command) Execute() error {
-
-	return nil
 }
