@@ -1,6 +1,8 @@
-package command
+package engine
 
-type EngineConfig struct {
+import "text/template"
+
+type Config struct {
 	// Source of articles
 	Content string
 	// Static files
@@ -13,6 +15,19 @@ type EngineConfig struct {
 	FmDelimeter string
 }
 
-type Engine struct {
-	conf *EngineConfig
+type engine struct {
+	cf  *Config
+	tpl *template.Template
+}
+
+func New(cf *Config) (*engine, error) {
+	tpl, err := collectLayouts(cf.Layout)
+	if err != nil {
+		return nil, err
+	}
+	e := &engine{
+		cf:  cf,
+		tpl: tpl,
+	}
+	return e, nil
 }
