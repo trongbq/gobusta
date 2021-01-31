@@ -2,27 +2,31 @@ package engine
 
 import (
 	"fmt"
-	"log"
+	"html/template"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/trongbq/gobusta/engine/parser"
+
+	"github.com/Depado/bfchroma"
+	"github.com/alecthomas/chroma/styles"
+	"github.com/russross/blackfriday/v2"
 )
 
-type PostPublishedDate time.Time
+var chromaRenderer = bfchroma.NewRenderer(bfchroma.ChromaStyle(styles.GitHub))
 
 type Post struct {
 	Title       string
 	PublishedAt time.Time
-	Tags        []tag
+	Tags        []string
 	Content     string
 	URL         string
 }
 
-type tag struct {
-	name string
+func (p Post) RenderContent() template.HTML {
+	return template.HTML(blackfriday.Run([]byte(p.Content), blackfriday.WithRenderer(chromaRenderer)))
 }
 
 func (e *engine) collectContent() ([]*Post, error) {
@@ -52,8 +56,18 @@ func (e *engine) collectContent() ([]*Post, error) {
 		if err != nil {
 			return fmt.Errorf("%v: %v", path, err)
 		}
-		log.Println(fm)
-		log.Println(content)
+		date, err := time.Parse("2006-01-02", fm.Date)
+		if err != nil {
+			return fmt.Errorf("%v: parse date error %v", path, err)
+		}
+		p := Post{
+			Title:       fm.Title,
+			PublishedAt: date,
+			Tags:        fm.Tags,
+			Content:     content,
+			URL:         path[len(e.cf.Content):len(path)-len(".md")] + ".html",
+		}
+		posts = append(posts, &p)
 		return nil
 	})
 	return posts, err

@@ -2,28 +2,33 @@
 <!DOCTYPE html>
 <html lang="en">
 
-{{template "headhtml" .}}
+  {{template "headhtml" .}}
 
-<body>
+  <body>
     <div id="site">
-        {{template "headerhtml" .}}
-        <main class="center-cont">
-            <article class="post-detail">
-                <h3 class="post-title">{{ .Title }}</h3>
-                <div class="post-metadata">
-                    <div class="post-published-at">
-                        <span>{{ .Date }}</span>
-                    </div>
-                </div>
-                <div class="post-content">
-                    {{ .RenderContent }}
-                </div>
-            </article>
-        </main>
-	{{template "footerhtml" .}}
+      {{template "headerhtml" .}}
+      <main class="center-cont">
+        <article class="post-detail">
+          <h3 class="post-title">{{ .Title }}</h3>
+          <div class="post-metadata">
+            <div class="post-published-at">
+			  <span>{{ .PublishedAt.Format "Jan 02, 2006" }}</span>
+			</div>
+            <div class="post-tags">
+              {{ range .Tags }}
+              #<span>{{ . }}</span>
+              {{ end }}
+            </div>
+          </div>
+          <div class="post-content">
+            {{ .RenderContent }}
+          </div>
+        </article>
+      </main>
+	  {{template "footerhtml" .}}
     </div>
     {{template "scripthtml" .}}
-</body>
+  </body>
 
 </html>
 {{end}}
