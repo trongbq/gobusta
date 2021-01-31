@@ -22,11 +22,6 @@ jobs:
         GOPROXY: "https://proxy.golang.org"
       run: ./build.bash
 
-    - name: Build worker
-      env:
-        GOPROXY: "https://proxy.golang.org"
-      run: go build -o worker ./cmd/worker
-
     - name: Check
       run: |
         export PATH=${PATH}:`go env GOPATH`/bin
