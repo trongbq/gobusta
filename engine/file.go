@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -24,7 +23,7 @@ func copyDir(src, dest string) error {
 		return err
 	}
 	if err != nil {
-		return errors.New(fmt.Sprintf("Can not copy from %v to %v, source does not exist", src, dest, src))
+		return fmt.Errorf("can not copy from %v to %v, source does not exist", src, dest)
 	}
 
 	// Check destination is valid, create new if it does not exist

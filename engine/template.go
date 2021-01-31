@@ -33,7 +33,7 @@ func collectLayouts(l string) (*template.Template, error) {
 	}
 	tpl, err := template.New("").ParseFiles(layouts...)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing layout files: %v", err)
+		return nil, fmt.Errorf("error parsing layout files: %v", err)
 	}
 	log.Println("Collecting layout files done!")
 	return tpl, nil
