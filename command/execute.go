@@ -32,7 +32,7 @@ func (c *command) Execute() error {
 		})
 		err := s.Serve()
 		if err != nil {
-			log.Fatal()
+			log.Fatal(err)
 		}
 	}
 
