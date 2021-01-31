@@ -20,7 +20,7 @@ jobs:
     - name: Build API server
       env:
         GOPROXY: "https://proxy.golang.org"
-      run: go build -o api-server ./cmd/api-server
+      run: ./build.bash
 
     - name: Build worker
       env:
