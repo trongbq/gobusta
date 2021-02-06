@@ -30,8 +30,20 @@ Generally `gobusta` will assume there are three directories in your site reposit
 With current version, only two data on front matter which are
 - `title` is the title of the post
 - `date` is the published date
+- `tags` contains list of tag
 
-More data for front matter will be added in future release. 
+The format of a post will be something like this
+
+```
+{
+  "title": "Gobusta, the blog engine",
+  "date": "2020-05-11",
+  "tags": ["sample", "post", "gobusta", "markdown"]
+}
++++
+Gobusta is a handly tool for building mininal blog site.
+...
+```
 
 ### License
 Please see the [LICENSE](https://github.com/trongbq/gobusta/blob/master/LICENSE) file.
