@@ -1,0 +1,37 @@
+{{define "indexhtml"}}
+<!DOCTYPE html>
+<html lang="en">
+
+{{template "headhtml" .}}
+
+<body>
+  <div id="site">
+	{{template "headerhtml" .}}
+    <main class="center-cont" id="main-content">
+      <div id="post-list">
+		{{ range . }}
+		<a href="{{ .URL }}" class="post-link">
+		  <div class="post-list-item">
+			<h3>{{ .Title }}</h3>
+			<div class="post-metadata">
+			  <div class="post-published-at">
+				<span>{{ .PublishedAt.Format "Jan 02, 2006" }}</span>
+			  </div>
+              <div class="post-tags">
+                {{ range .Tags }}
+                #<span>{{ . }}</span>
+                {{ end }}
+              </div>
+			</div>
+		  </div>
+		</a>
+		{{ end }}
+      </div>
+    </main>
+	{{template "footerhtml" .}}
+  </div>
+  {{template "scripthtml" .}}
+</body>
+
+</html>
+{{end}}

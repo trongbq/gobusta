@@ -1,8 +1,9 @@
+{
+  "title": "Sample Markdown Syntax",
+  "date": "2020-05-11",
+  "tags": ["sample", "post", "markdown"]
+}
 +++
-title: Sample Markdown Syntax
-date: 2020-05-11
-+++
-
 This article offers a sample of basic Markdown syntax that can be used in Hugo content files, also it shows whether basic HTML elements are decorated with CSS in a Hugo theme.
 
 ![cover image](/static/img/glenn-carstens-peters-npxXWgQ33ZQ-unsplash.jpg)
