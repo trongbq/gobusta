@@ -26,19 +26,22 @@ func NewParser(fd string) *Parser {
 // Parse parses input into front matter and content string
 func (p *Parser) Parse(in io.Reader) (*FrontMatter, string, error) {
 	splitFunc := func(data []byte, eof bool) (advance int, token []byte, err error) {
+		// Scan to the end, no more data to read
 		if eof && len(data) == 0 {
 			return 0, nil, nil
 		}
+		// Find the front matter delimiter, split the content based on delimiter location
 		fmd := []byte(p.fd)
 		fmdl := len(p.fd)
-		// log.Println("hello", eof, string(data))
 		if i := bytes.Index(data, fmd); i >= 0 {
 			return i + fmdl, bytes.TrimSpace(data[:i]), nil
 		}
+		// The content is read to the end, but the content is not empty, this content need to be returned
 		if eof {
-			return 0, nil, nil
+			return len(data), bytes.TrimSpace(data), nil
 		}
-		return len(data), bytes.TrimSpace(data), nil
+		// The content is not enough to split, request more data
+		return 0, nil, nil
 	}
 
 	s := bufio.NewScanner(in)
